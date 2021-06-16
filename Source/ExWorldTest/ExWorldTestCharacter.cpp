@@ -8,6 +8,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Components/ArrowComponent.h"
+#include "Projectile.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AExWorldTestCharacter
@@ -76,6 +78,64 @@ void AExWorldTestCharacter::SetupPlayerInputComponent(class UInputComponent* Pla
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AExWorldTestCharacter::OnResetVR);
 }
 
+
+void AExWorldTestCharacter::SpawnProjectile()
+{
+	FActorSpawnParameters Params;
+
+	Params.Instigator = this;
+
+	UArrowComponent* ProjectileSocket = Cast<UArrowComponent>(GetDefaultSubobjectByName("ProjectileSocket"));
+	AProjectile* NewProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileSocket->GetComponentLocation(), ProjectileSocket->GetComponentRotation(), Params);
+	
+}
+
+void AExWorldTestCharacter::Fire()
+{
+	ServerSpawnProjectile();
+}
+
+
+void AExWorldTestCharacter::ServerSpawnProjectile_Implementation()
+{
+	SpawnProjectile();
+	//MulticastSpawnProjectile();
+}
+
+bool AExWorldTestCharacter::ServerSpawnProjectile_Validate()
+{
+	return true;
+}
+
+void AExWorldTestCharacter::MulticastSpawnProjectile_Implementation()
+{
+	SpawnProjectile();
+}
+
+
+void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile)
+{
+	ServerDestroyProjectile(Projectile);
+}
+
+void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile)
+{
+	Projectile->Destroy();
+	//MulticastDestroyProjectile(Projectile);
+}
+
+bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projectile)
+{
+	return true;
+}
+
+void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectile* Projectile)
+{
+	if (IsValid(Projectile))
+	{
+		Projectile->Destroy();
+	}
+}
 
 void AExWorldTestCharacter::OnResetVR()
 {

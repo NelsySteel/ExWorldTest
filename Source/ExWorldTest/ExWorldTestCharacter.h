@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "ExWorldTestCharacter.generated.h"
 
+class AProjectile;
+
 UCLASS(config=Game)
 class AExWorldTestCharacter : public ACharacter
 {
@@ -29,6 +31,28 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UFUNCTION(BlueprintCallable)
+	void Fire();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSpawnProjectile();
+	void ServerSpawnProjectile_Implementation();
+	bool ServerSpawnProjectile_Validate();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSpawnProjectile();
+	void MulticastSpawnProjectile_Implementation();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerDestroyProjectile(AProjectile* Projectile);
+	void ServerDestroyProjectile_Implementation(AProjectile* Projectile);
+	bool ServerDestroyProjectile_Validate(AProjectile* Projectile);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastDestroyProjectile(AProjectile* Projectile);
+	void MulticastDestroyProjectile_Implementation(AProjectile* Projectile);
+
+	void OnProjectileHit(AProjectile* Projectile);
 protected:
 
 	/** Resets HMD orientation in VR. */
@@ -63,10 +87,12 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	void SpawnProjectile();
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
 };
 
