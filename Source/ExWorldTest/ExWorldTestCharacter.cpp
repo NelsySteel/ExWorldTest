@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Projectile.h"
+#include "ProjectileReactionComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AExWorldTestCharacter
@@ -106,28 +107,33 @@ bool AExWorldTestCharacter::ServerSpawnProjectile_Validate()
 	return true;
 }
 
-void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile)
+void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
 {
-	ServerDestroyProjectile(Projectile);
+	ServerDestroyProjectile(Projectile, OtherActor, hit);
 }
 
-void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile)
+void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
 {
 	
-	MulticastDestroyProjectile(Projectile);
+	MulticastDestroyProjectile(Projectile, OtherActor, hit);
 	Projectile->Destroy();
 }
 
-bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projectile)
+bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
 {
 	return true;
 }
 
-void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectile* Projectile)
+void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
 {
 	if (HasAuthority())
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s just hit with his bullet!"), *GetName()));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s just hit with his bullet!"), *GetName()));
+	}
+	
+	if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
+	{
+		ReactionComponent->ReactToProjectileHit(hit);
 	}
 }
 

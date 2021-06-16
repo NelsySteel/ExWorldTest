@@ -26,7 +26,8 @@ AProjectile::AProjectile()
 	MeshComp->SetEnableGravity(false);
 	MeshComp->SetNotifyRigidBodyCollision(true);
 	MeshComp->BodyInstance.SetCollisionProfileName("BlockAllDynamic");
-	
+	MeshComp->GetBodyInstance()->bOverrideMass = true;
+	MeshComp->SetMassOverrideInKg(NAME_None, 100.f);
 
 	MeshComp->OnComponentHit.AddDynamic(this, &AProjectile::OnCompHit);
 	RootComponent = MeshComp;
@@ -41,7 +42,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
 		auto instigator = GetInstigator();
 		if (AExWorldTestCharacter* InstigatorCharacter = Cast<AExWorldTestCharacter>(instigator))
 		{
-			InstigatorCharacter->OnProjectileHit(this);
+			InstigatorCharacter->OnProjectileHit(this, OtherActor, hit);
 			Destroy();
 		}
 	}
