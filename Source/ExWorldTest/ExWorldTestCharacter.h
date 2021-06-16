@@ -39,10 +39,6 @@ public:
 	void ServerSpawnProjectile_Implementation();
 	bool ServerSpawnProjectile_Validate();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastSpawnProjectile();
-	void MulticastSpawnProjectile_Implementation();
-
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerDestroyProjectile(AProjectile* Projectile);
 	void ServerDestroyProjectile_Implementation(AProjectile* Projectile);

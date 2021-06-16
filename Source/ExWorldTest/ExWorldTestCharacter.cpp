@@ -99,19 +99,12 @@ void AExWorldTestCharacter::Fire()
 void AExWorldTestCharacter::ServerSpawnProjectile_Implementation()
 {
 	SpawnProjectile();
-	//MulticastSpawnProjectile();
 }
 
 bool AExWorldTestCharacter::ServerSpawnProjectile_Validate()
 {
 	return true;
 }
-
-void AExWorldTestCharacter::MulticastSpawnProjectile_Implementation()
-{
-	SpawnProjectile();
-}
-
 
 void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile)
 {
@@ -120,8 +113,9 @@ void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile)
 
 void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile)
 {
+	
+	MulticastDestroyProjectile(Projectile);
 	Projectile->Destroy();
-	//MulticastDestroyProjectile(Projectile);
 }
 
 bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projectile)
@@ -131,9 +125,9 @@ bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projec
 
 void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectile* Projectile)
 {
-	if (IsValid(Projectile))
+	if (HasAuthority())
 	{
-		Projectile->Destroy();
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s just hit with his bullet!"), *GetName()));
 	}
 }
 
