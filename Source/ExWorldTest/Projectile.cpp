@@ -25,6 +25,7 @@ AProjectile::AProjectile()
 	MeshComp->SetSimulatePhysics(true);
 	MeshComp->SetEnableGravity(false);
 	MeshComp->SetNotifyRigidBodyCollision(true);
+	MeshComp->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel1);
 	MeshComp->BodyInstance.SetCollisionProfileName("BlockAllDynamic");
 	MeshComp->GetBodyInstance()->bOverrideMass = true;
 	MeshComp->SetMassOverrideInKg(NAME_None, 100.f);
@@ -39,6 +40,10 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
 {
 	if (OtherActor != NULL && OtherActor != this && OtherComponent != NULL)
 	{
+		if (!hit.GetActor())
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("NoActor!!"));
+		}
 		auto instigator = GetInstigator();
 		if (AExWorldTestCharacter* InstigatorCharacter = Cast<AExWorldTestCharacter>(instigator))
 		{
@@ -58,8 +63,34 @@ void AProjectile::BeginPlay()
 void AProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	FVector ProjectileDirection = GetActorForwardVector() * Speed;
+	FVector ProjectileDirection = GetActorForwardVector();;
 	
-	SetActorLocation(GetActorLocation() + ProjectileDirection);
+
+
+	const FVector ShootDir = ProjectileDirection;
+	FVector StartTrace = GetActorLocation() + ShootDir * 10;
+	const FVector DestinationPoint = GetActorLocation() + ShootDir * Speed * GetWorld()->GetDeltaSeconds();
+
+	// Perform trace to retrieve hit info
+	FCollisionQueryParams TraceParams(FName(TEXT("CollisionTrace")), true, this);
+	TraceParams.bReturnPhysicalMaterial = true;
+
+	FHitResult Hit(ForceInit);
+	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, DestinationPoint, ECollisionChannel::ECC_Pawn, TraceParams);
+
+	while (Hit.GetActor() == this)
+	{
+		StartTrace = StartTrace + ShootDir * 10;
+		GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, DestinationPoint, ECollisionChannel::ECC_Pawn, TraceParams);
+	}
+
+	if (Hit.GetActor())
+	{
+		SetActorLocation(Hit.ImpactPoint - ProjectileDirection);
+	}
+	else
+	{
+		SetActorLocation(DestinationPoint);
+	}
 }
 

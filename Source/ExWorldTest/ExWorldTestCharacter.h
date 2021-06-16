@@ -31,6 +31,18 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_CurrentLife)
+	int32 Health = 100;
+
+	UPROPERTY(EditAnywhere, Category = "Stats")
+	int32 MaxHealth = 100;
+
+	UFUNCTION()
+	void OnRep_CurrentLife();
+
+	UFUNCTION(BlueprintCallable)
+	void ChangeHealth(int32 Delta);
+
 	UFUNCTION(BlueprintCallable)
 	void Fire();
 
@@ -49,6 +61,8 @@ public:
 	void MulticastDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
 
 	void OnProjectileHit(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
+
+	void GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const override;
 protected:
 
 	/** Resets HMD orientation in VR. */

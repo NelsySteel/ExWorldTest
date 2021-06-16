@@ -23,7 +23,7 @@ public:
 	UStaticMesh* Mesh;
 
 	UPROPERTY(EditAnywhere, Category = "Moving")
-	float Speed = 10.f;
+	float Speed = 1000.f;
 
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComponent, 

@@ -6,6 +6,9 @@
 #include "ProjectileReactionComponent.h"
 #include "StaticProjReactionComponent.generated.h"
 
+
+class ADecalActor;
+
 /**
  * 
  */
@@ -14,13 +17,17 @@ class EXWORLDTEST_API UStaticProjReactionComponent : public UProjectileReactionC
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere)
+	UStaticProjReactionComponent();
+
+	UPROPERTY(EditAnywhere, Category = "Decal")
 	UMaterial* DecalMaterial = nullptr;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Decal")
 	FVector    DecalSize = FVector(5.0f, 10.0f, 10.0f);
 
 	virtual void ReactToProjectileHit(const FHitResult& hit) override;
+
+	UClass* DefaultDecalClass = nullptr;
 
 private:
 	FVector LocationOffset;

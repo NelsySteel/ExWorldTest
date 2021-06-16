@@ -11,6 +11,9 @@
 #include "Components/ArrowComponent.h"
 #include "Projectile.h"
 #include "ProjectileReactionComponent.h"
+#include "StaticProjReactionComponent.h"
+#include "PlayerProjReactionComponent.h"
+#include "Net/UnrealNetwork.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AExWorldTestCharacter
@@ -46,9 +49,30 @@ AExWorldTestCharacter::AExWorldTestCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	CreateDefaultSubobject<UPlayerProjReactionComponent>(TEXT("ProjectileReactionComponent"));
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
+
+void AExWorldTestCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{ 
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps); 
+	DOREPLIFETIME(AExWorldTestCharacter, Health);
+}
+
+void AExWorldTestCharacter::OnRep_CurrentLife()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("OnRep_CurrentLife %d"), Health));
+}
+
+void AExWorldTestCharacter::ChangeHealth(int32 Delta)
+{
+	Health = FMath::Clamp(Health + Delta, 0, MaxHealth);
+	if (HasAuthority())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("OnRep_CurrentLife %d"), Health));
+	}
+}	
 
 //////////////////////////////////////////////////////////////////////////
 // Input
@@ -109,7 +133,11 @@ bool AExWorldTestCharacter::ServerSpawnProjectile_Validate()
 
 void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
 {
-	ServerDestroyProjectile(Projectile, OtherActor, hit);
+	if (HasAuthority())
+	{
+		ServerDestroyProjectile(Projectile, OtherActor, hit);
+
+	}
 }
 
 void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
@@ -134,6 +162,12 @@ void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectil
 	if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
 	{
 		ReactionComponent->ReactToProjectileHit(hit);
+	}
+	else
+	{
+		UProjectileReactionComponent* NewReactionComponent = NewObject<UStaticProjReactionComponent>(OtherActor);
+		OtherActor->FinishAndRegisterComponent(NewReactionComponent);
+		NewReactionComponent->ReactToProjectileHit(hit);
 	}
 }
 
