@@ -10,5 +10,6 @@ void UPlayerProjReactionComponent::ReactToProjectileHit(const FHitResult& hit)
 	if (AExWorldTestCharacter* Character = Cast<AExWorldTestCharacter>(GetOwner()))
 	{
 		Character->ChangeHealth(-20);
+		Character->OnBulletHit(hit);
 	}
 }

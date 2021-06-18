@@ -31,11 +31,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_CurrentLife)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentLife, Category = "Stats")
 	int32 Health = 100;
 
-	UPROPERTY(EditAnywhere, Category = "Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 MaxHealth = 100;
+	
+	UPROPERTY(EditAnywhere, Category = "Shooting")
+	TSubclassOf<AProjectile> ProjectileClass;
 
 	UFUNCTION()
 	void OnRep_CurrentLife();
@@ -51,16 +54,8 @@ public:
 	void ServerSpawnProjectile_Implementation();
 	bool ServerSpawnProjectile_Validate();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerDestroyProjectile(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
-	void ServerDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
-	bool ServerDestroyProjectile_Validate(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastDestroyProjectile(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
-	void MulticastDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
-
-	void OnProjectileHit(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit);
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnBulletHit(const FHitResult& HitData);
 
 	void GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const override;
 protected:

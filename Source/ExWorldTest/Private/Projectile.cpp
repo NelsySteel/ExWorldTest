@@ -3,6 +3,50 @@
 
 #include "Projectile.h"
 #include "ExWorldTestCharacter.h"
+#include "ProjectileReactionComponent.h"
+#include "StaticProjReactionComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/DecalActor.h"
+#include "Components/DecalComponent.h"
+
+AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
+{
+	FCallbacksMap CallbacksMap;
+	CallbacksMap.Add("Static", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	{
+		if (AdditionalClasses.Contains("Decal"))
+		{
+			FRotator RotatorToNormal = UKismetMathLibrary::MakeRotFromX(HitData.Normal);
+			FVector HitLocation = HitData.Location;
+			FRotator ImpactPointRotation = HitData.ImpactNormal.Rotation();
+			ADecalActor* DecalImpostor = Actor->GetWorld()->SpawnActor<ADecalActor>(AdditionalClasses["Decal"]);
+			DecalImpostor->SetHidden(true);
+
+			UMaterialInterface* DefaultDecalMaterial = DecalImpostor->GetDecalMaterial();
+			FVector DefaultDecalSize = DecalImpostor->GetDecal()->DecalSize;
+
+			UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, Actor->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
+			decalComp->SetFadeScreenSize(0.0001);
+			DecalImpostor->Destroy();
+		}
+		
+	});
+	CallbacksMap.Add("Character", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	{
+		if (AExWorldTestCharacter* Character = Cast<AExWorldTestCharacter>(Actor))
+		{
+			Character->ChangeHealth(-20);
+			Character->OnBulletHit(HitData);
+		}
+	});
+	CallbacksMap.Add("Destructible", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	{
+	});
+	return CallbacksMap;
+};
+
+AProjectile::FCallbacksMap AProjectile::ShotCallbacks = InitCallbacksMap();
 
 // Sets default values
 AProjectile::AProjectile()
@@ -32,23 +76,24 @@ AProjectile::AProjectile()
 
 	MeshComp->OnComponentHit.AddDynamic(this, &AProjectile::OnCompHit);
 	RootComponent = MeshComp;
+
+	static ConstructorHelpers::FObjectFinder<UClass>SphereMeshAsset(TEXT("Blueprint'/Game/ThirdPersonCPP/Blueprints/BP_DefaultDecal.BP_DefaultDecal_C'"));
+	DefaultDecalClass = SphereMeshAsset.Object;
 }
 
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
 	AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse,
-	const FHitResult& hit)
+	const FHitResult& HitData)
 {
 	if (OtherActor != NULL && OtherActor != this && OtherComponent != NULL)
 	{
-		if (!hit.GetActor())
+		if (!HitData.GetActor())
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("NoActor!!"));
 		}
-		auto instigator = GetInstigator();
-		if (AExWorldTestCharacter* InstigatorCharacter = Cast<AExWorldTestCharacter>(instigator))
+		if (HasAuthority())
 		{
-			InstigatorCharacter->OnProjectileHit(this, OtherActor, hit);
-			Destroy();
+			ServerDestroyProjectile(OtherActor, HitData);
 		}
 	}
 }
@@ -71,3 +116,34 @@ void AProjectile::Tick(float DeltaTime)
 	SetActorLocation(DestinationPoint);
 }
 
+
+void AProjectile::ServerDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& HitData)
+{
+	MulticastDestroyProjectile(OtherActor, HitData);
+	Destroy();
+}
+
+bool AProjectile::ServerDestroyProjectile_Validate(AActor* OtherActor, const FHitResult& HitData)
+{
+	return true;
+}
+
+void AProjectile::MulticastDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& HitData)
+{
+	if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
+	{
+		ReactionComponent->ReactToProjectileHit(HitData);
+	}
+	else
+	{
+		FAdditionalClasses AdditionalClasses;
+		AdditionalClasses.Add("Decal", DefaultDecalClass);
+		for (const FName& tag : OtherActor->Tags)
+		{
+			if (ShotCallbacks.Contains(tag))
+			{
+				ShotCallbacks[tag](OtherActor, HitData, AdditionalClasses);
+			}
+		}
+	}
+}

@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class EXWORLDTEST_API UPlayerProjReactionComponent : public UProjectileReactionComponent
 {
 	GENERATED_BODY()

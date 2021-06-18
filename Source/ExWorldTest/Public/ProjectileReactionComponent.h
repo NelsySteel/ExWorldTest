@@ -7,7 +7,7 @@
 #include "ProjectileReactionComponent.generated.h"
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(Abstract)
 class EXWORLDTEST_API UProjectileReactionComponent : public UActorComponent
 {
 	GENERATED_BODY()

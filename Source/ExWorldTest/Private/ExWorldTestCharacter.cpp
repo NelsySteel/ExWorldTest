@@ -101,18 +101,21 @@ void AExWorldTestCharacter::SetupPlayerInputComponent(class UInputComponent* Pla
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AExWorldTestCharacter::OnResetVR);
+	Health = MaxHealth;
 }
 
 
 void AExWorldTestCharacter::SpawnProjectile()
 {
-	FActorSpawnParameters Params;
+	if (IsValid(ProjectileClass))
+	{
+		FActorSpawnParameters Params;
 
-	Params.Instigator = this;
+		Params.Instigator = this;
 
-	UArrowComponent* ProjectileSocket = Cast<UArrowComponent>(GetDefaultSubobjectByName("ProjectileSocket"));
-	AProjectile* NewProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileSocket->GetComponentLocation(), ProjectileSocket->GetComponentRotation(), Params);
-	
+		UArrowComponent* ProjectileSocket = Cast<UArrowComponent>(GetDefaultSubobjectByName("ProjectileSocket"));
+		AProjectile* NewProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileClass, ProjectileSocket->GetComponentLocation(), ProjectileSocket->GetComponentRotation(), Params);
+	}
 }
 
 void AExWorldTestCharacter::Fire()
@@ -129,46 +132,6 @@ void AExWorldTestCharacter::ServerSpawnProjectile_Implementation()
 bool AExWorldTestCharacter::ServerSpawnProjectile_Validate()
 {
 	return true;
-}
-
-void AExWorldTestCharacter::OnProjectileHit(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
-{
-	if (HasAuthority())
-	{
-		ServerDestroyProjectile(Projectile, OtherActor, hit);
-
-	}
-}
-
-void AExWorldTestCharacter::ServerDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
-{
-	
-	MulticastDestroyProjectile(Projectile, OtherActor, hit);
-	Projectile->Destroy();
-}
-
-bool AExWorldTestCharacter::ServerDestroyProjectile_Validate(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
-{
-	return true;
-}
-
-void AExWorldTestCharacter::MulticastDestroyProjectile_Implementation(AProjectile* Projectile, AActor* OtherActor, const FHitResult& hit)
-{
-	if (HasAuthority())
-	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s just hit with his bullet!"), *GetName()));
-	}
-	
-	if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
-	{
-		ReactionComponent->ReactToProjectileHit(hit);
-	}
-	else
-	{
-		UProjectileReactionComponent* NewReactionComponent = NewObject<UStaticProjReactionComponent>(OtherActor);
-		OtherActor->FinishAndRegisterComponent(NewReactionComponent);
-		NewReactionComponent->ReactToProjectileHit(hit);
-	}
 }
 
 void AExWorldTestCharacter::OnResetVR()

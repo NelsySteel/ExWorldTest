@@ -8,7 +8,7 @@
 
 class USphereComponent;
 
-UCLASS()
+UCLASS(Blueprintable, BlueprintType)
 class EXWORLDTEST_API AProjectile : public AActor
 {
 	GENERATED_BODY()
@@ -30,6 +30,14 @@ public:
 		AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse,
 		const FHitResult& hit);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerDestroyProjectile(AActor* OtherActor, const FHitResult& hit);
+	void ServerDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& hit);
+	bool ServerDestroyProjectile_Validate(AActor* OtherActor, const FHitResult& hit);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastDestroyProjectile(AActor* OtherActor, const FHitResult& hit);
+	void MulticastDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& hit);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -37,4 +45,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+private:
+	typedef TMap<FString, UClass*> FAdditionalClasses;
+	typedef TMap<FName, TFunction<void(AActor*, const FHitResult&, FAdditionalClasses)>> FCallbacksMap;
+	static FCallbacksMap ShotCallbacks;
+	static FCallbacksMap InitCallbacksMap();
+
+	UClass* DefaultDecalClass = nullptr;
 };
