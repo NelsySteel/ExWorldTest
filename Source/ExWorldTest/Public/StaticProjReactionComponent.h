@@ -23,7 +23,7 @@ public:
 	UMaterial* DecalMaterial = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Decal")
-	FVector    DecalSize = FVector(5.0f, 10.0f, 10.0f);
+	FVector    DecalSize = FVector(15.0f, 10.0f, 10.0f);
 
 	virtual void ReactToProjectileHit(const FHitResult& hit) override;
 

@@ -35,6 +35,7 @@ void UStaticProjReactionComponent::ReactToProjectileHit(const FHitResult& hit)
 
 		UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, hit.GetActor()->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
 		decalComp->SetFadeScreenSize(0.0001);
+		DecalImpostor->Destroy();
 	}
 	else
 	{

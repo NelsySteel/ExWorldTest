@@ -65,32 +65,9 @@ void AProjectile::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	FVector ProjectileDirection = GetActorForwardVector();;
 	
-
-
 	const FVector ShootDir = ProjectileDirection;
-	FVector StartTrace = GetActorLocation() + ShootDir * 10;
-	const FVector DestinationPoint = GetActorLocation() + ShootDir * Speed * GetWorld()->GetDeltaSeconds();
-
-	// Perform trace to retrieve hit info
-	FCollisionQueryParams TraceParams(FName(TEXT("CollisionTrace")), true, this);
-	TraceParams.bReturnPhysicalMaterial = true;
-
-	FHitResult Hit(ForceInit);
-	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, DestinationPoint, ECollisionChannel::ECC_Pawn, TraceParams);
-
-	while (Hit.GetActor() == this)
-	{
-		StartTrace = StartTrace + ShootDir * 10;
-		GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, DestinationPoint, ECollisionChannel::ECC_Pawn, TraceParams);
-	}
-
-	if (Hit.GetActor())
-	{
-		SetActorLocation(Hit.ImpactPoint - ProjectileDirection);
-	}
-	else
-	{
-		SetActorLocation(DestinationPoint);
-	}
+	FVector StartTrace = GetActorLocation();
+	const FVector DestinationPoint = StartTrace + ShootDir * Speed * GetWorld()->GetDeltaSeconds();
+	SetActorLocation(DestinationPoint);
 }
 
