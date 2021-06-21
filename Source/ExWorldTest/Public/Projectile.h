@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DecalActor.h"
 #include "Projectile.generated.h"
 
-class USphereComponent;
+DECLARE_LOG_CATEGORY_EXTERN(LogProjectile, Warning, All);
 
+class USphereComponent;
+class UProjectileMovementComponent;
 UCLASS(Blueprintable, BlueprintType)
 class EXWORLDTEST_API AProjectile : public AActor
 {
@@ -17,13 +20,14 @@ public:
 	// Sets default values for this actor's properties
 	AProjectile();
 
+	UPROPERTY(EditAnywhere, Category = "Mesh")
 	UStaticMeshComponent* MeshComp;
 
-	UPROPERTY(EditAnywhere, Category = "Mesh")
-	UStaticMesh* Mesh;
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	UProjectileMovementComponent* ProjectileMovementComp;
 
-	UPROPERTY(EditAnywhere, Category = "Moving")
-	float Speed = 1000.f;
+	UPROPERTY(EditAnywhere, Category = "Shooting")
+	TSubclassOf<ADecalActor> DecalClass = nullptr;
 
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComponent, 
@@ -38,6 +42,8 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastDestroyProjectile(AActor* OtherActor, const FHitResult& hit);
 	void MulticastDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& hit);
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -46,10 +52,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	typedef TMap<FString, UClass*> FAdditionalClasses;
-	typedef TMap<FName, TFunction<void(AActor*, const FHitResult&, FAdditionalClasses)>> FCallbacksMap;
-	static FCallbacksMap ShotCallbacks;
-	static FCallbacksMap InitCallbacksMap();
-
-	UClass* DefaultDecalClass = nullptr;
+	typedef TMap<FName, TFunction<void(AActor*, const FHitResult&)>> FCallbacksMap;
+	FCallbacksMap ShotCallbacks;
+	FCallbacksMap InitCallbacksMap();
 };

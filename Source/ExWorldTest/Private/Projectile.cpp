@@ -7,32 +7,47 @@
 #include "StaticProjReactionComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "Engine/DecalActor.h"
 #include "Components/DecalComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+
+DEFINE_LOG_CATEGORY(LogProjectile);
 
 AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 {
 	FCallbacksMap CallbacksMap;
-	CallbacksMap.Add("Static", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	CallbacksMap.Add("Static", [this](AActor* Actor, const FHitResult& HitData)
 	{
-		if (AdditionalClasses.Contains("Decal"))
+		if (IsValid(Actor))
 		{
-			FRotator RotatorToNormal = UKismetMathLibrary::MakeRotFromX(HitData.Normal);
-			FVector HitLocation = HitData.Location;
-			FRotator ImpactPointRotation = HitData.ImpactNormal.Rotation();
-			ADecalActor* DecalImpostor = Actor->GetWorld()->SpawnActor<ADecalActor>(AdditionalClasses["Decal"]);
-			DecalImpostor->SetHidden(true);
+			if (IsValid(DecalClass))
+			{
+				FRotator RotatorToNormal = UKismetMathLibrary::MakeRotFromX(HitData.Normal);
+				FVector HitLocation = HitData.Location;
+				FRotator ImpactPointRotation = HitData.ImpactNormal.Rotation();
+				ADecalActor* DecalImpostor = Actor->GetWorld()->SpawnActor<ADecalActor>(DecalClass);
+				DecalImpostor->SetHidden(true);
 
-			UMaterialInterface* DefaultDecalMaterial = DecalImpostor->GetDecalMaterial();
-			FVector DefaultDecalSize = DecalImpostor->GetDecal()->DecalSize;
+				UMaterialInterface* DefaultDecalMaterial = DecalImpostor->GetDecalMaterial();
+				FVector DefaultDecalSize = DecalImpostor->GetDecal()->DecalSize;
 
-			UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, Actor->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
-			decalComp->SetFadeScreenSize(0.0001);
-			DecalImpostor->Destroy();
+				UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, Actor->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
+				if (decalComp)
+				{
+					decalComp->SetFadeScreenSize(0.0001);
+				}
+				else
+				{
+					UE_LOG(LogProjectile, Warning, TEXT("Decal Component couldn't be created"));
+				}
+				DecalImpostor->Destroy();
+			}
+			else
+			{
+				UE_LOG(LogProjectile, Warning, TEXT("Decal creation failed : no decal class!"));
+			}
 		}
-		
 	});
-	CallbacksMap.Add("Character", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	CallbacksMap.Add("Character", [](AActor* Actor, const FHitResult& HitData)
 	{
 		if (AExWorldTestCharacter* Character = Cast<AExWorldTestCharacter>(Actor))
 		{
@@ -40,13 +55,11 @@ AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 			Character->OnBulletHit(HitData);
 		}
 	});
-	CallbacksMap.Add("Destructible", [](AActor* Actor, const FHitResult& HitData, FAdditionalClasses AdditionalClasses)
+	CallbacksMap.Add("Destructible", [](AActor* Actor, const FHitResult& HitData)
 	{
 	});
 	return CallbacksMap;
 };
-
-AProjectile::FCallbacksMap AProjectile::ShotCallbacks = InitCallbacksMap();
 
 // Sets default values
 AProjectile::AProjectile()
@@ -54,31 +67,22 @@ AProjectile::AProjectile()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
-
-	if (!IsValid(Mesh))
-	{
-		static ConstructorHelpers::FObjectFinder<UStaticMesh>SphereMeshAsset(TEXT("StaticMesh'/Game/Geometry/Meshes/Sphere.Sphere'"));
-		
-		if (SphereMeshAsset.Succeeded())
-		{
-			Mesh = SphereMeshAsset.Object;
-		}
-	}
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	MeshComp->SetStaticMesh(Mesh);
+	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+	ProjectileMovementComp->InitialSpeed = 100;
 	MeshComp->SetSimulatePhysics(true);
 	MeshComp->SetEnableGravity(false);
 	MeshComp->SetNotifyRigidBodyCollision(true);
 	MeshComp->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel1);
 	MeshComp->BodyInstance.SetCollisionProfileName("BlockAllDynamic");
-	MeshComp->GetBodyInstance()->bOverrideMass = true;
-	MeshComp->SetMassOverrideInKg(NAME_None, 100.f);
 
 	MeshComp->OnComponentHit.AddDynamic(this, &AProjectile::OnCompHit);
 	RootComponent = MeshComp;
+}
 
-	static ConstructorHelpers::FObjectFinder<UClass>SphereMeshAsset(TEXT("Blueprint'/Game/ThirdPersonCPP/Blueprints/BP_DefaultDecal.BP_DefaultDecal_C'"));
-	DefaultDecalClass = SphereMeshAsset.Object;
+void AProjectile::OnConstruction(const FTransform& Transform)
+{
+	AActor::OnConstruction(Transform);
 }
 
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
@@ -102,18 +106,14 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
 void AProjectile::BeginPlay()
 {
 	Super::BeginPlay();
+	ProjectileMovementComp->Velocity = GetInstigator()->GetActorForwardVector() * ProjectileMovementComp->InitialSpeed;
+	ShotCallbacks = InitCallbacksMap();
 }
 
 // Called every frame
 void AProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	FVector ProjectileDirection = GetActorForwardVector();;
-	
-	const FVector ShootDir = ProjectileDirection;
-	FVector StartTrace = GetActorLocation();
-	const FVector DestinationPoint = StartTrace + ShootDir * Speed * GetWorld()->GetDeltaSeconds();
-	SetActorLocation(DestinationPoint);
 }
 
 
@@ -130,19 +130,20 @@ bool AProjectile::ServerDestroyProjectile_Validate(AActor* OtherActor, const FHi
 
 void AProjectile::MulticastDestroyProjectile_Implementation(AActor* OtherActor, const FHitResult& HitData)
 {
-	if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
+	if (OtherActor != nullptr)
 	{
-		ReactionComponent->ReactToProjectileHit(HitData);
-	}
-	else
-	{
-		FAdditionalClasses AdditionalClasses;
-		AdditionalClasses.Add("Decal", DefaultDecalClass);
-		for (const FName& tag : OtherActor->Tags)
+		if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
 		{
-			if (ShotCallbacks.Contains(tag))
+			ReactionComponent->ReactToProjectileHit(HitData);
+		}
+		else
+		{
+			for (const FName& tag : OtherActor->Tags)
 			{
-				ShotCallbacks[tag](OtherActor, HitData, AdditionalClasses);
+				if (ShotCallbacks.Contains(tag))
+				{
+					ShotCallbacks[tag](OtherActor, HitData);
+				}
 			}
 		}
 	}
