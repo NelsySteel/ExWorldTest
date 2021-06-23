@@ -18,7 +18,7 @@ class EXWORLDTEST_API UStaticProjReactionComponent : public UProjectileReactionC
 {
 	GENERATED_BODY()
 public:
-	UStaticProjReactionComponent();
+	UStaticProjReactionComponent() {}
 
 	UPROPERTY(EditAnywhere, Category = "Decal")
 	UMaterial* DecalMaterial = nullptr;
@@ -27,9 +27,4 @@ public:
 	FVector    DecalSize = FVector(15.0f, 10.0f, 10.0f);
 
 	virtual void ReactToProjectileHit(const FHitReactionInfo& HitInfo) override;
-
-	UClass* DefaultDecalClass = nullptr;
-
-private:
-	FVector LocationOffset;
 };

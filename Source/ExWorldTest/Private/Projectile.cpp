@@ -28,10 +28,10 @@ AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 				ADecalActor* DecalImpostor = Actor->GetWorld()->SpawnActor<ADecalActor>(DecalClass);
 				DecalImpostor->SetHidden(true);
 
-				UMaterialInterface* DefaultDecalMaterial = DecalImpostor->GetDecalMaterial();
-				FVector DefaultDecalSize = DecalImpostor->GetDecal()->DecalSize;
+				UMaterialInterface* DecalMaterial = DecalImpostor->GetDecalMaterial();
+				FVector DecalSize = DecalImpostor->GetDecal()->DecalSize;
 
-				UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, Actor->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
+				UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DecalMaterial, DecalSize, Actor->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
 				if (decalComp)
 				{
 					decalComp->SetFadeScreenSize(0.0001);
@@ -39,6 +39,10 @@ AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 				else
 				{
 					UE_LOG(LogProjectile, Warning, TEXT("Decal Component couldn't be created"));
+					if (!IsValid(DecalMaterial))
+					{
+						UE_LOG(LogProjectile, Warning, TEXT("No Decal Material"));
+					}
 				}
 				DecalImpostor->Destroy();
 			}

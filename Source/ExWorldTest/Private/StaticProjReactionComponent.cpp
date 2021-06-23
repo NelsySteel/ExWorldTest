@@ -7,12 +7,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
-UStaticProjReactionComponent::UStaticProjReactionComponent() : UProjectileReactionComponent()
-{
-	static ConstructorHelpers::FObjectFinder<UClass>SphereMeshAsset(TEXT("Blueprint'/Game/ThirdPersonCPP/Blueprints/BP_DefaultDecal.BP_DefaultDecal_C'"));
-	DefaultDecalClass = SphereMeshAsset.Object;
-}
-
 void UStaticProjReactionComponent::ReactToProjectileHit(const FHitReactionInfo& HitInfo)
 {
 	FHitResult HitResult = HitInfo.HitResult;
@@ -21,20 +15,7 @@ void UStaticProjReactionComponent::ReactToProjectileHit(const FHitReactionInfo& 
 	FRotator ImpactPointRotation = HitResult.ImpactNormal.Rotation();
 	if (!IsValid(DecalMaterial))
 	{
-		// Happens when projectile hits into the instigator
-		if (!HitResult.GetActor())
-		{
-			return;
-		}
-		ADecalActor* DecalImpostor = GetWorld()->SpawnActor<ADecalActor>(DefaultDecalClass);
-		DecalImpostor->SetHidden(true);
-
-		UMaterialInterface* DefaultDecalMaterial = DecalImpostor->GetDecalMaterial();
-		FVector DefaultDecalSize = DecalImpostor->GetDecal()->DecalSize;
-
-		UDecalComponent* decalComp = UGameplayStatics::SpawnDecalAttached(DefaultDecalMaterial, DefaultDecalSize, HitResult.GetActor()->GetRootComponent(), "", HitLocation, ImpactPointRotation, EAttachLocation::KeepWorldPosition, 2.0f);
-		decalComp->SetFadeScreenSize(0.0001);
-		DecalImpostor->Destroy();
+		UE_LOG(LogProjectile, Warning, TEXT("Decal creation failed : no decal class!"));
 	}
 	else
 	{
