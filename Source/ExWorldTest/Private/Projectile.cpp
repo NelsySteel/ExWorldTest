@@ -8,6 +8,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/DecalComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogProjectile);
@@ -50,6 +52,19 @@ AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 			{
 				UE_LOG(LogProjectile, Warning, TEXT("Decal creation failed : no decal class!"));
 			}
+		}
+		if (IsValid(ShotSound))
+		{
+			UAudioComponent * propellerAudioComponent = NewObject<UAudioComponent>(Actor, TEXT("PropellerAudioComp"));
+			propellerAudioComponent->bAutoActivate = false;
+			propellerAudioComponent->AttachTo(Actor->GetRootComponent());
+			propellerAudioComponent->SetWorldLocation(HitReactionInfo.HitResult.Location);
+			propellerAudioComponent->SetSound(ShotSound);
+			propellerAudioComponent->Play();
+		}
+		else
+		{
+			UE_LOG(LogProjectile, Warning, TEXT("No sound set for shot!"));
 		}
 	});
 	CallbacksMap.Add(EActorReactionType::Character, [](const FHitReactionInfo& HitReactionInfo)

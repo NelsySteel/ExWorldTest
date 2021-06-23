@@ -23,6 +23,7 @@ enum EActorReactionType
 	Count
 };
 ENUM_RANGE_BY_COUNT(EActorReactionType, EActorReactionType::Count)
+
 USTRUCT(BlueprintType, Blueprintable)
 struct FHitReactionInfo : public FTableRowBase
 {
@@ -39,6 +40,8 @@ struct FHitReactionInfo : public FTableRowBase
 
 class USphereComponent;
 class UProjectileMovementComponent;
+class USoundCue;
+
 UCLASS(Blueprintable, BlueprintType)
 class EXWORLDTEST_API AProjectile : public AActor
 {
@@ -56,6 +59,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Shooting")
 	TSubclassOf<ADecalActor> DecalClass = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Shooting")
+	USoundCue* ShotSound = nullptr;
 
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComponent, 
