@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ProjectileReactionComponent.h"
+#include "Projectile.h"
 #include "PlayerProjReactionComponent.generated.h"
 
 /**
@@ -14,5 +15,5 @@ class EXWORLDTEST_API UPlayerProjReactionComponent : public UProjectileReactionC
 {
 	GENERATED_BODY()
 public:
-	virtual void ReactToProjectileHit(const FHitResult& hit) override;
+	virtual void ReactToProjectileHit(const FHitReactionInfo& HitInfo) override;
 };

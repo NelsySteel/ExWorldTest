@@ -15,15 +15,16 @@ DEFINE_LOG_CATEGORY(LogProjectile);
 AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 {
 	FCallbacksMap CallbacksMap;
-	CallbacksMap.Add("Static", [this](AActor* Actor, const FHitResult& HitData)
+	CallbacksMap.Add(EActorReactionType::Static, [this](const FHitReactionInfo& HitReactionInfo)
 	{
+		AActor* Actor = HitReactionInfo.HitResult.GetActor();
 		if (IsValid(Actor))
 		{
 			if (IsValid(DecalClass))
 			{
-				FRotator RotatorToNormal = UKismetMathLibrary::MakeRotFromX(HitData.Normal);
-				FVector HitLocation = HitData.Location;
-				FRotator ImpactPointRotation = HitData.ImpactNormal.Rotation();
+				FRotator RotatorToNormal = UKismetMathLibrary::MakeRotFromX(HitReactionInfo.HitResult.Normal);
+				FVector HitLocation = HitReactionInfo.HitResult.Location;
+				FRotator ImpactPointRotation = HitReactionInfo.HitResult.ImpactNormal.Rotation();
 				ADecalActor* DecalImpostor = Actor->GetWorld()->SpawnActor<ADecalActor>(DecalClass);
 				DecalImpostor->SetHidden(true);
 
@@ -47,15 +48,15 @@ AProjectile::FCallbacksMap AProjectile::InitCallbacksMap()
 			}
 		}
 	});
-	CallbacksMap.Add("Character", [](AActor* Actor, const FHitResult& HitData)
+	CallbacksMap.Add(EActorReactionType::Character, [](const FHitReactionInfo& HitReactionInfo)
 	{
-		if (AExWorldTestCharacter* Character = Cast<AExWorldTestCharacter>(Actor))
+		if (AExWorldTestCharacter* Character = Cast<AExWorldTestCharacter>(HitReactionInfo.HitResult.GetActor()))
 		{
 			Character->ChangeHealth(-20);
-			Character->OnBulletHit(HitData);
+			Character->OnBulletHit(HitReactionInfo.HitResult);
 		}
 	});
-	CallbacksMap.Add("Destructible", [](AActor* Actor, const FHitResult& HitData)
+	CallbacksMap.Add(EActorReactionType::Destructible, [](const FHitReactionInfo& HitReactionInfo)
 	{
 	});
 	return CallbacksMap;
@@ -83,6 +84,23 @@ AProjectile::AProjectile()
 void AProjectile::OnConstruction(const FTransform& Transform)
 {
 	AActor::OnConstruction(Transform);
+}
+
+TArray<TEnumAsByte<EActorReactionType>> AProjectile::GetActorReactionTypes(AActor* Actor) const
+{
+	TArray<TEnumAsByte<EActorReactionType>> result;
+	for (const FName& Tag : Actor->Tags)
+	{
+		for (EActorReactionType Type : TEnumRange<EActorReactionType>())
+		{
+			if (FName(UEnum::GetValueAsString<EActorReactionType>(Type)) == Tag)
+			{
+				result.Add(Type);
+				break;
+			}
+		}
+	}
+	return result;
 }
 
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent,
@@ -134,15 +152,19 @@ void AProjectile::MulticastDestroyProjectile_Implementation(AActor* OtherActor, 
 	{
 		if (UProjectileReactionComponent* ReactionComponent = Cast<UProjectileReactionComponent>(OtherActor->FindComponentByClass(UProjectileReactionComponent::StaticClass())))
 		{
-			ReactionComponent->ReactToProjectileHit(HitData);
+			//Type doesn't matter here, components don't care
+			ReactionComponent->ReactToProjectileHit(FHitReactionInfo(EActorReactionType::Undefined, HitData));
 		}
 		else
 		{
-			for (const FName& tag : OtherActor->Tags)
+			for (TEnumAsByte<EActorReactionType> Type : GetActorReactionTypes(OtherActor))
 			{
-				if (ShotCallbacks.Contains(tag))
+				if (!CustomProcessProjectileHitByType(FHitReactionInfo(Type, HitData)))
 				{
-					ShotCallbacks[tag](OtherActor, HitData);
+					if (ShotCallbacks.Contains(Type))
+					{
+						ShotCallbacks[Type](FHitReactionInfo(Type, HitData));
+					}
 				}
 			}
 		}

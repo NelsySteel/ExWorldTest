@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ProjectileReactionComponent.h"
+#include "Projectile.h"
 #include "StaticProjReactionComponent.generated.h"
 
 
@@ -25,7 +26,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Decal")
 	FVector    DecalSize = FVector(15.0f, 10.0f, 10.0f);
 
-	virtual void ReactToProjectileHit(const FHitResult& hit) override;
+	virtual void ReactToProjectileHit(const FHitReactionInfo& HitInfo) override;
 
 	UClass* DefaultDecalClass = nullptr;
 

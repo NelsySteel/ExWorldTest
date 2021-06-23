@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Projectile.h"
 #include "ProjectileReactionComponent.generated.h"
 
 
@@ -16,7 +17,7 @@ public:
 	// Sets default values for this component's properties
 	UProjectileReactionComponent();
 
-	virtual void ReactToProjectileHit(const FHitResult& hit) {}
+	virtual void ReactToProjectileHit(const FHitReactionInfo& HitInfo) {}
 
 protected:
 	// Called when the game starts
